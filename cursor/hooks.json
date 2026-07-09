@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt": [
+      { "command": "__HOME__/.cursor/hooks/light.sh yellow" }
+    ],
+    "beforeShellExecution": [
+      { "command": "__HOME__/.cursor/hooks/light.sh red" }
+    ],
+    "beforeMCPExecution": [
+      { "command": "__HOME__/.cursor/hooks/light.sh red" }
+    ],
+    "afterShellExecution": [
+      { "command": "__HOME__/.cursor/hooks/light.sh yellow" }
+    ],
+    "afterMCPExecution": [
+      { "command": "__HOME__/.cursor/hooks/light.sh yellow" }
+    ],
+    "afterFileEdit": [
+      { "command": "__HOME__/.cursor/hooks/light.sh yellow" }
+    ],
+    "stop": [
+      { "command": "__HOME__/.cursor/hooks/light.sh green" }
+    ]
+  }
+}
