@@ -2,19 +2,21 @@
 
 A physical USB status light for **Cursor** and **Claude Code** on macOS — see what your AI agent is doing without alt-tabbing.
 
-| Color | Meaning |
-|---|---|
-| 🟡 Yellow | Agent is thinking / turn in flight |
-| 🔴 Red | Agent is running a tool (shell, MCP, edits) |
-| 🟣 Magenta (solid) | Agent has probably asked you a question and is waiting (fires after 60s of mid-turn silence) |
-| 🟢 Green | Turn finished |
-| ⚫ Off | Idle (20s after green, or 180s after magenta, or laptop undocked) |
+| Color | Meaning | Cursor trigger | Claude Code trigger |
+|---|---|---|---|
+| 🟡 Yellow | Agent is thinking / turn in flight | `beforeSubmitPrompt`, `after*` events | `UserPromptSubmit`, `PostToolUse` |
+| 🔴 Red | Agent is running a tool | `beforeShellExecution`, `beforeMCPExecution` | `PreToolUse` |
+| 🟣 Magenta (solid) | Waiting for you | *inferred* — 60s of yellow silence (see [design decisions](#architecture)) | `Notification` with `notification_type: permission_prompt` — precise |
+| 🟢 Green | Turn finished | `stop` | `Stop` |
+| ⚫ Off | Idle / done | 20s after green **or** 180s after magenta (silence-watchdog in `light.sh`) | `Notification: idle_prompt`, `SessionEnd`, or laptop undocked |
+
+Claude Code's signals are strictly more precise because it fires distinct events for "needs approval" and "idle" — no watchdog inference needed. Cursor has no equivalent events, so the Cursor side infers "waiting for you" from silence and accepts occasional false magentas during long thinking stretches as the trade-off.
 
 No Arduino, no soldering, no custom firmware. Off-the-shelf hardware + open-source CLI + editor hooks.
 
 ## Hardware
 
-- **[Luxafor Flag 2](https://www.amazon.com/dp/B0DTJL1ZNY)** (~$50, USB-C). The original Luxafor Flag works identically — the Flag 2 reports the exact same USB identity (vendor `0x04d8`, product `0xf372`), so all software treats them as the same device.
+- **[Luxafor Flag 2](https://luxafor.com/product/flag2/)** (~$50, USB-C). The original Luxafor Flag works identically — the Flag 2 reports the exact same USB identity (vendor `0x04d8`, product `0xf372`), so all software treats them as the same device.
 - Any USB light supported by [busylight-for-humans](https://github.com/JnyJny/busylight) also works (blink(1), Blynclight, Kuando, BlinkStick...) — the HTTP layer is identical, you'd only re-test colors.
 - Works plugged into the Mac directly **or** into a monitor's USB hub (see [Dock/undock survival](#dockundock-survival)).
 
@@ -78,11 +80,13 @@ The installer copies scripts to `~/.local/bin` and `~/.cursor/hooks`, generates 
 
 **Cursor** — the installer places [`cursor/hooks.json`](cursor/hooks.json) at `~/.cursor/hooks.json` (it will NOT overwrite an existing one; merge manually in that case). Fully restart Cursor afterwards — hooks.json is read at startup. (`light.sh` itself is re-read on every event; editing it needs no restart.)
 
-**Claude Code** — merge the `"hooks"` object from [`claude-code/settings-hooks.json`](claude-code/settings-hooks.json) into `~/.claude/settings.json`. Back it up first:
+**Claude Code** — the main `install.sh` auto-detects Claude Code and runs `install-claude-hooks.sh` for you (requires `jq`: `brew install jq`). Or run it directly:
 
 ```bash
-cp ~/.claude/settings.json ~/.claude/settings.json.bak
+./install-claude-hooks.sh
 ```
+
+It backs up your existing `~/.claude/settings.json` with a timestamp, then deep-merges — top-level keys (`model`, `statusLine`, etc.) are preserved, and only the six hook events this repo defines get overwritten. Any other hooks you already have (e.g., custom formatters on `PostToolUse`) are kept. Prefer to merge by hand? The fragment is [`claude-code/settings-hooks.json`](claude-code/settings-hooks.json).
 
 ### 4. Test
 
@@ -121,11 +125,12 @@ Recovery is within ~30s of re-dock. Force it immediately: `launchctl kickstart -
 
 ```
 install.sh                        one-shot setup (idempotent-ish, path-aware)
+install-claude-hooks.sh           jq-based merger for ~/.claude/settings.json
 scripts/light.sh                  hook target: sets color + watchdog timers
 scripts/flag-watchdog.sh          re-enumeration detector → busyserve kickstart
 scripts/log-hook.sh               optional: log raw hook payloads for debugging
 cursor/hooks.json                 Cursor hook config (template; installer fixes paths)
-claude-code/settings-hooks.json   hooks object to merge into ~/.claude/settings.json
+claude-code/settings-hooks.json   hooks fragment for ~/.claude/settings.json
 launchagents/*.plist.template     busyserve + watchdog LaunchAgents (installer fills paths)
 ```
 

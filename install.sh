@@ -76,9 +76,18 @@ else
   echo "~/.cursor/hooks.json installed. RESTART CURSOR to load it."
 fi
 
-echo "For Claude Code: merge the hooks object from"
-echo "  $REPO_DIR/claude-code/settings-hooks.json"
-echo "into ~/.claude/settings.json (back it up first)."
+if [ -d "$HOME/.claude" ] || command -v claude >/dev/null 2>&1; then
+  if command -v jq >/dev/null 2>&1; then
+    echo "Claude Code detected — running install-claude-hooks.sh..."
+    "$REPO_DIR/install-claude-hooks.sh"
+  else
+    echo "Claude Code detected but jq is missing. Install jq (brew install jq)"
+    echo "and run: $REPO_DIR/install-claude-hooks.sh"
+  fi
+else
+  echo "Claude Code not detected. To wire it up later, run:"
+  echo "  $REPO_DIR/install-claude-hooks.sh"
+fi
 
 # --- 4. Verify ---------------------------------------------------------------
 sleep 3
