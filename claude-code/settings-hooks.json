@@ -1,26 +1,26 @@
 {
   "//": "Merge this 'hooks' object into ~/.claude/settings.json (back it up first).",
-  "//2": "Claude Code has richer events than Cursor: Notification carries a matchable",
-  "//3": "notification_type, so 'needs approval' and 'idle' are precise, not inferred.",
-  "//4": "'async: true' (Claude Code >= Jan 2026) keeps hooks from blocking the agent;",
-  "//5": "remove the field on older versions. SessionEnd stays synchronous on purpose:",
-  "//6": "async hooks can be killed mid-teardown and the final 'off' never lands.",
+  "//2": "Placeholders (__THINKING__, __WORKING__, __NEEDS_INPUT__, __DONE__, __DIM__)",
+  "//3": "are substituted by install-claude-hooks.sh with the state's color and the",
+  "//4": "current dim value. Change later with: light-color <state> <color>,",
+  "//5": "light-preset <name>, or light-dim <0.0-1.0>. Off-mapped states become a",
+  "//6": "no-op that the merger inserts as a bare 'true'.",
   "hooks": {
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/on?color=yellow' >/dev/null 2>&1 || true", "async": true }] }
+      { "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/on?color=__THINKING__&dim=__DIM__' >/dev/null 2>&1 || true", "async": true }] }
     ],
     "PreToolUse": [
-      { "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/on?color=red' >/dev/null 2>&1 || true", "async": true }] }
+      { "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/on?color=__WORKING__&dim=__DIM__' >/dev/null 2>&1 || true", "async": true }] }
     ],
     "PostToolUse": [
-      { "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/on?color=yellow' >/dev/null 2>&1 || true", "async": true }] }
+      { "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/on?color=__THINKING__&dim=__DIM__' >/dev/null 2>&1 || true", "async": true }] }
     ],
     "Notification": [
-      { "matcher": "permission_prompt", "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/on?color=magenta' >/dev/null 2>&1 || true", "async": true }] },
+      { "matcher": "permission_prompt", "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/on?color=__NEEDS_INPUT__&dim=__DIM__' >/dev/null 2>&1 || true", "async": true }] },
       { "matcher": "idle_prompt", "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/off' >/dev/null 2>&1 || true", "async": true }] }
     ],
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/on?color=green' >/dev/null 2>&1 || true", "async": true }] }
+      { "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/on?color=__DONE__&dim=__DIM__' >/dev/null 2>&1 || true", "async": true }] }
     ],
     "SessionEnd": [
       { "hooks": [{ "type": "command", "command": "curl -s -m 2 'http://localhost:8631/light/0/off' >/dev/null 2>&1 || true" }] }

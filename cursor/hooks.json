@@ -2,25 +2,25 @@
   "version": 1,
   "hooks": {
     "beforeSubmitPrompt": [
-      { "command": "__HOME__/.cursor/hooks/light.sh yellow" }
+      { "command": "__HOME__/.cursor/hooks/light.sh thinking" }
     ],
     "beforeShellExecution": [
-      { "command": "__HOME__/.cursor/hooks/light.sh red" }
+      { "command": "__HOME__/.cursor/hooks/light.sh working" }
     ],
     "beforeMCPExecution": [
-      { "command": "__HOME__/.cursor/hooks/light.sh red" }
+      { "command": "__HOME__/.cursor/hooks/light.sh working" }
     ],
     "afterShellExecution": [
-      { "command": "__HOME__/.cursor/hooks/light.sh yellow" }
+      { "command": "__HOME__/.cursor/hooks/light.sh thinking" }
     ],
     "afterMCPExecution": [
-      { "command": "__HOME__/.cursor/hooks/light.sh yellow" }
+      { "command": "__HOME__/.cursor/hooks/light.sh thinking" }
     ],
     "afterFileEdit": [
-      { "command": "__HOME__/.cursor/hooks/light.sh yellow" }
+      { "command": "__HOME__/.cursor/hooks/light.sh thinking" }
     ],
     "stop": [
-      { "command": "__HOME__/.cursor/hooks/light.sh green" }
+      { "command": "__HOME__/.cursor/hooks/light.sh done" }
     ]
   }
 }

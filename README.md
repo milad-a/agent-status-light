@@ -2,21 +2,21 @@
 
 A physical USB status light for **Cursor** and **Claude Code** on macOS — see what your AI agent is doing without alt-tabbing.
 
-| Color | Meaning | Cursor trigger | Claude Code trigger |
+| State | Default color | When it fires (Cursor) | When it fires (Claude Code) |
 |---|---|---|---|
-| 🟡 Yellow | Agent is thinking / turn in flight | `beforeSubmitPrompt`, `after*` events | `UserPromptSubmit`, `PostToolUse` |
-| 🔴 Red | Agent is running a tool | `beforeShellExecution`, `beforeMCPExecution` | `PreToolUse` |
-| 🟣 Magenta (solid) | Waiting for you | *inferred* — 60s of yellow silence (see [design decisions](#architecture)) | `Notification` with `notification_type: permission_prompt` — precise |
-| 🟢 Green | Turn finished | `stop` | `Stop` |
-| ⚫ Off | Idle / done | 20s after green **or** 180s after magenta (silence-watchdog in `light.sh`) | `Notification: idle_prompt`, `SessionEnd`, or laptop undocked |
+| **thinking** | 🟡 yellow | `beforeSubmitPrompt`, `after*` events | `UserPromptSubmit`, `PostToolUse` |
+| **working** | 🔴 red | `beforeShellExecution`, `beforeMCPExecution` | `PreToolUse` |
+| **needs_input** | 🟣 magenta | *inferred* — 60s of thinking-silence | `Notification` with `notification_type: permission_prompt` |
+| **done** | 🟢 green | `stop` | `Stop` |
+| *(off)* | ⚫ | 20s after done **or** 180s after needs_input | `Notification: idle_prompt`, `SessionEnd`, undocked |
 
-Claude Code's signals are strictly more precise because it fires distinct events for "needs approval" and "idle" — no watchdog inference needed. Cursor has no equivalent events, so the Cursor side infers "waiting for you" from silence and accepts occasional false magentas during long thinking stretches as the trade-off.
+Claude Code's signals are strictly more precise because it fires distinct events for "needs approval" and "idle" — no watchdog inference needed. Cursor has no equivalent events, so the Cursor side infers `needs_input` from silence and accepts occasional false positives during long thinking stretches as the trade-off.
 
 No Arduino, no soldering, no custom firmware. Off-the-shelf hardware + open-source CLI + editor hooks.
 
 ## Hardware
 
-- **[Luxafor Flag 2](https://luxafor.com/product/flag2/)** (~$50, USB-C). The original Luxafor Flag works identically — the Flag 2 reports the exact same USB identity (vendor `0x04d8`, product `0xf372`), so all software treats them as the same device.
+- **[Luxafor Flag 2](https://luxafor.com/product/flag2/)** (~$40, USB-C). The original Luxafor Flag works identically — the Flag 2 reports the exact same USB identity (vendor `0x04d8`, product `0xf372`), so all software treats them as the same device.
 - Any USB light supported by [busylight-for-humans](https://github.com/JnyJny/busylight) also works (blink(1), Blynclight, Kuando, BlinkStick...) — the HTTP layer is identical, you'd only re-test colors.
 - Works plugged into the Mac directly **or** into a monitor's USB hub (see [Dock/undock survival](#dockundock-survival)).
 
@@ -71,10 +71,11 @@ busylight off
 
 ```bash
 git clone <this repo> && cd agent-status-light
-./install.sh
+./install.sh                                    # defaults: preset=traffic, dim=1.0
+./install.sh --preset minimal --dim 0.3         # less flicker, 30% brightness
 ```
 
-The installer copies scripts to `~/.local/bin` and `~/.cursor/hooks`, generates the two LaunchAgents with your real paths, loads them, and verifies the server answers. Prefer doing it manually? Every step is in [`install.sh`](install.sh) — it's short and commented.
+The installer copies scripts and the three CLIs (`light-dim`, `light-color`, `light-preset`) to `~/.local/bin`, generates the two LaunchAgents with your real paths, loads them, and verifies the server answers. Config lives at `~/.config/agent-status-light/config`.
 
 ### 3. Editor hooks
 
@@ -101,6 +102,51 @@ light() { curl -s "http://localhost:8631/light/0/on?color=$1" >/dev/null; }
 
 Colors: any CSS3 name (`hotpink`, `teal`, ...) or hex (`0xff8800`, `%23ff8800` URL-encoded).
 
+## Customization
+
+### Presets
+
+Change the whole palette at once:
+
+```bash
+light-preset traffic     # default — full information
+light-preset minimal     # thinking=yellow, working=yellow — one color per turn, less flicker
+light-preset subtle      # thinking=off, working=yellow — quiet until Claude does something
+light-preset done-only   # thinking=off, working=off — nothing until it's done
+light-preset             # show current values
+```
+
+| Preset | thinking | working | needs_input | done |
+|---|---|---|---|---|
+| traffic | yellow | red | magenta | green |
+| minimal | yellow | yellow | magenta | green |
+| subtle | off | yellow | magenta | green |
+| done-only | off | off | magenta | green |
+
+`needs_input` and `done` stay lit in every preset — that's the whole point of the light. The presets only vary how much noise the "actively doing stuff" phase makes.
+
+### Individual state colors
+
+Override any single state:
+
+```bash
+light-color needs_input hotpink       # more noticeable than magenta
+light-color thinking goldenrod        # amber instead of yellow
+light-color working off               # disable working without changing preset
+```
+
+Colors accept any CSS3 name (`red`, `hotpink`, `teal`, `chartreuse`...), hex (`0xff8800`), or the special value `off`.
+
+### Brightness
+
+```bash
+light-dim 0.3     # 30% — courteous in shared spaces
+light-dim 1.0     # full
+light-dim         # show current value
+```
+
+All three CLIs take effect immediately for Cursor (next event picks it up from `~/.config/agent-status-light/config`) and rewrite `~/.claude/settings.json` in place (with a timestamped backup) so Claude Code hooks change without a restart. On the Flag, red is more eye-catching than green at the same brightness — 0.3 is a decent open-office default.
+
 ## Dock/undock survival
 
 If the Flag hangs off a monitor's USB hub and you take the laptop to meetings:
@@ -124,25 +170,19 @@ Recovery is within ~30s of re-dock. Force it immediately: `launchctl kickstart -
 ## Repo layout
 
 ```
-install.sh                        one-shot setup (idempotent-ish, path-aware)
+install.sh                        one-shot setup (--dim VALUE, --preset NAME)
 install-claude-hooks.sh           jq-based merger for ~/.claude/settings.json
-scripts/light.sh                  hook target: sets color + watchdog timers
+scripts/_lib.sh                   shared config load/save + Claude Code rewriter
+scripts/light.sh                  Cursor hook target: state -> color + watchdog timers
+scripts/light-dim.sh              CLI: change brightness
+scripts/light-color.sh            CLI: change a single state's color
+scripts/light-preset.sh           CLI: apply a preset (traffic/minimal/subtle/done-only)
 scripts/flag-watchdog.sh          re-enumeration detector → busyserve kickstart
 scripts/log-hook.sh               optional: log raw hook payloads for debugging
-cursor/hooks.json                 Cursor hook config (template; installer fixes paths)
-claude-code/settings-hooks.json   hooks fragment for ~/.claude/settings.json
-launchagents/*.plist.template     busyserve + watchdog LaunchAgents (installer fills paths)
+cursor/hooks.json                 Cursor hook config (state names, not colors)
+claude-code/settings-hooks.json   Claude Code fragment with __STATE__ placeholders
+launchagents/*.plist.template     busyserve + watchdog LaunchAgents
 ```
-
-## Tuning
-
-All timers live in `scripts/light.sh` (Cursor path):
-
-| Timer | Default | Meaning |
-|---|---|---|
-| `sleep 60` (magenta branch) | 60s | mid-turn silence before "probably waiting on you" |
-| `sleep 180` (after magenta) | 180s | magenta lifetime before giving up → off |
-| `sleep 20` (green branch) | 20s | idle-off after a finished turn |
 
 ## Credits
 
