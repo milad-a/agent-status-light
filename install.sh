@@ -116,7 +116,7 @@ fi
 # --- 5. Verify ---------------------------------------------------------------
 sleep 3
 if curl -s -m 3 'http://localhost:8631/lights/0/status' | grep -q 'Flag'; then
-  echo "busyserve is up and sees the Flag. Victory lap:"
+  echo "busyserve is up and sees the Flag. Flashing green..."
   curl -s 'http://localhost:8631/light/0/on?color=green' >/dev/null
   sleep 2
   curl -s 'http://localhost:8631/light/0/off' >/dev/null
