@@ -39,7 +39,7 @@ fi
 PIDFILE=/tmp/cursor-light-watchdog.pid
 [ -f "$PIDFILE" ] && kill "$(cat "$PIDFILE")" 2>/dev/null
 
-if [ "$STATE" = "thinking" ]; then
+if [ "$STATE" = "thinking" ] || [ "$STATE" = "working" ]; then
   ATTN="$COLOR_NEEDS_INPUT"
   ( sleep 60
     if [ "$ATTN" = "off" ]; then
