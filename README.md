@@ -16,7 +16,7 @@ No Arduino, no soldering, no custom firmware. Off-the-shelf hardware + open-sour
 
 ## Hardware
 
-- **[Luxafor Flag 2](https://luxafor.com/product/flag2/)** (~$50, USB-C). The original Luxafor Flag works identically — the Flag 2 reports the exact same USB identity (vendor `0x04d8`, product `0xf372`), so all software treats them as the same device.
+- **[Luxafor Flag 2](https://luxafor.com/product/flag2/)** ([~$50 on Amazon](https://www.amazon.com/dp/B0DTJL1ZNY), USB-C). The original Luxafor Flag works identically — the Flag 2 reports the exact same USB identity (vendor `0x04d8`, product `0xf372`), so all software treats them as the same device.
 - Any USB light supported by [busylight-for-humans](https://github.com/JnyJny/busylight) also works (blink(1), Blynclight, Kuando, BlinkStick...) — the HTTP layer is identical, you'd only re-test colors.
 - Works plugged into the Mac directly **or** into a monitor's USB hub (see [Dock/undock survival](#dockundock-survival)).
 
